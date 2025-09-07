@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swaasthya sakhi</title>
+    <style>
+        /* This CSS block is complete and requires no changes */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        :root { --bg-color: #131314; --text-color: #E3E3E3; --input-bg-color: #1E1F20; --user-msg-bg: #3C4655; --bot-msg-bg: #2D2E30; --accent-color: #8A69F5; --button-color: #2D2E30; --border-color: #333; --error-color: #ff6b6b; --success-color: #2ecc71; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-color); display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        .auth-container { width: 100%; max-width: 400px; padding: 40px; background-color: var(--input-bg-color); border-radius: 12px; border: 1px solid var(--border-color); text-align: center; }
+        .auth-container h1 { font-size: 24px; margin-bottom: 10px; }
+        .auth-container p { color: #aaa; margin-bottom: 30px; }
+        .input-group { text-align: left; margin-bottom: 20px; }
+        .input-group label { display: block; margin-bottom: 8px; font-weight: 500; }
+        .input-group input, .input-group select { width: 100%; padding: 12px; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); font-size: 16px; font-family: 'Inter', sans-serif;}
+        .auth-container button { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background-color 0.2s; }
+        #auth-toggle-btn { background: none; color: var(--accent-color); margin-top: 20px; }
+        #submit-btn { background-color: var(--accent-color); color: white; margin-top: 10px; }
+        #submit-btn:hover { background-color: #7b58e0; }
+        #error-message { color: var(--error-color); margin-top: 15px; height: 20px; font-weight: 500; }
+        .chat-container { width: 100%; height: 100%; max-width: 700px; max-height: 90vh; background-color: var(--input-bg-color); border-radius: 12px; display: flex; flex-direction: column; border: 1px solid var(--border-color); overflow: hidden; }
+        .chat-header { padding: 20px; background-color: var(--bg-color); font-weight: 600; border-bottom: 1px solid var(--border-color); }
+        .chat-history { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .chat-history::-webkit-scrollbar { width: 8px; } .chat-history::-webkit-scrollbar-track { background: var(--input-bg-color); } .chat-history::-webkit-scrollbar-thumb { background-color: var(--button-color); border-radius: 10px; }
+        .chat-message { padding: 12px 18px; border-radius: 18px; max-width: 75%; line-height: 1.5; }
+        .chat-message.user { background-color: var(--user-msg-bg); align-self: flex-end; border-bottom-right-radius: 4px; }
+        .chat-message.bot { background-color: var(--bot-msg-bg); align-self: flex-start; border-bottom-left-radius: 4px; }
+        .chat-message strong, .chat-message b { color: var(--accent-color); }
+        .chat-input-area { display: flex; padding: 15px; border-top: 1px solid var(--border-color); gap: 10px; }
+        #message-input { flex-grow: 1; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); padding: 12px; font-size: 16px; resize: none; }
+        #send-btn { background-color: var(--accent-color); border: none; color: white; padding: 0 20px; border-radius: 8px; font-size: 20px; cursor: pointer; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <!-- Authentication Screen -->
+    <div id="auth-container" class="auth-container">
+        <!-- THIS IS THE NEW LANGUAGE DROPDOWN -->
+        <div class="input-group">
+            <label for="language-select" id="language-label">Language</label>
+            <select id="language-select"></select>
+        </div>
+
+        <h1 id="auth-title">Login</h1>
+        <p id="auth-prompt">Welcome back!</p>
+        <div class="input-group">
+            <label for="username" id="username-label">Username</label>
+            <input type="text" id="username" name="username">
+        </div>
+        <div class="input-group">
+            <label for="password" id="password-label">Password</label>
+            <input type="password" id="password" name="password">
+        </div>
+        <div id="error-message"></div>
+        <button id="submit-btn">Login</button>
+        <button id="auth-toggle-btn">Register</button>
+    </div>
+
+    <!-- Chat Screen -->
+    <div id="chat-container" class="chat-container hidden">
+        <div class="chat-header" id="chat-header">Medical Assist Chatbot</div>
+        <div class="chat-history" id="chat-history"></div>
+        <div class="chat-input-area">
+            <input id="message-input" placeholder="Type your symptoms here..."></input>
+            <button id="send-btn">➤</button>
+        </div>
+    </div>
+
+    <script>
+        // --- NEW SCRIPT LOGIC ---
+
+        // The Flask backend injects the entire translations dictionary here.
+        // The 'tojson' filter is a safe way to convert a Python dict to a JS object.
+        const translations = {{ translations|tojson }};
+
+        // --- DOM Element References ---
+        const authContainer = document.getElementById('auth-container');
+        const chatContainer = document.getElementById('chat-container');
+        
+        // Auth screen elements
+        const langSelect = document.getElementById('language-select');
+        const langLabel = document.getElementById('language-label');
+        const authTitle = document.getElementById('auth-title');
+        const authPrompt = document.getElementById('auth-prompt');
+        const usernameLabel = document.getElementById('username-label');
+        const passwordLabel = document.getElementById('password-label');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const submitBtn = document.getElementById('submit-btn');
+        const toggleBtn = document.getElementById('auth-toggle-btn');
+        const errorMessage = document.getElementById('error-message');
+        
+        // Chat screen elements
+        const chatHeader = document.getElementById('chat-header');
+        const chatHistory = document.getElementById('chat-history');
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        
+        // --- State Management ---
+        let isLoginMode = true;
+        let selectedLanguage = 'en'; // Default language
+        let userSessionId = null;
+
+        const API_URL = 'http://127.0.0.1:5000';
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            populateLanguageSelector();
+            updateUIText(); // Set initial text to English
+
+            langSelect.addEventListener('change', handleLanguageChange);
+            toggleBtn.addEventListener('click', toggleAuthMode);
+            submitBtn.addEventListener('click', handleAuthSubmit);
+            sendBtn.addEventListener('click', sendMessage);
+            messageInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+        });
+
+        // --- NEW FUNCTIONS ---
+
+        function populateLanguageSelector() {
+            const langMap = translations.language_map;
+            for (const code in langMap) {
+                const option = document.createElement('option');
+                option.value = code;
+                option.textContent = langMap[code];
+                langSelect.appendChild(option);
+            }
+        }
+
+        function handleLanguageChange() {
+            selectedLanguage = langSelect.value;
+            updateUIText();
+        }
+
+        function updateUIText() {
+            const text = translations[selectedLanguage] || translations['en'];
+            
+            // Update auth screen text
+            langLabel.textContent = text.language_label || 'Language';
+            authTitle.textContent = isLoginMode ? text.login_title : text.register_title;
+            authPrompt.textContent = text.welcome_prompt;
+            usernameLabel.textContent = text.username_label;
+            passwordLabel.textContent = text.password_label;
+            submitBtn.textContent = isLoginMode ? text.login_button : text.register_button;
+            toggleBtn.textContent = isLoginMode ? text.register_button : text.login_button;
+            
+            // Update chat screen text
+            chatHeader.textContent = text.chat_title;
+        }
+
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            errorMessage.textContent = ''; // Clear error on toggle
+            updateUIText();
+        }
+
+        async function handleAuthSubmit() {
+            const username = usernameInput.value;
+            const password = passwordInput.value;
+            errorMessage.textContent = '';
+
+            if (!username || !password) {
+                errorMessage.textContent = (translations[selectedLanguage] || translations['en']).register_failed_empty;
+                return;
+            }
+
+            const endpoint = isLoginMode ? '/api/login' : '/api/register';
+            // NEW: We now send the selected language to the backend
+            const payload = { username, password, language: selectedLanguage };
+            
+            try {
+                if (isLoginMode) {
+                    userSessionId = `session_${Date.now()}_${Math.random()}`;
+                }
+
+                const response = await fetch(API_URL + endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Session-ID': userSessionId },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (isLoginMode) {
+                        showChatScreen(data.initial_bot_message);
+                    } else {
+                        isLoginMode = true; // Switch to login view after successful registration
+                        updateUIText();
+                        usernameInput.value = '';
+                        passwordInput.value = '';
+                        errorMessage.style.color = 'var(--success-color)';
+                        errorMessage.textContent = data.message;
+                    }
+                } else {
+                    errorMessage.style.color = 'var(--error-color)';
+                    errorMessage.textContent = data.message || 'An error occurred.';
+                }
+
+            } catch (error) {
+                console.error('Auth Error:', error);
+                errorMessage.textContent = 'Could not connect to the server. Is the backend running?';
+            }
+        }
+        
+        function showChatScreen(initialMessage) {
+            authContainer.classList.add('hidden');
+            chatContainer.classList.remove('hidden');
+            addMessageToHistory(initialMessage, 'bot');
+        }
+
+        async function sendMessage() {
+            const messageText = messageInput.value.trim();
+            if (messageText === '') return;
+            addMessageToHistory(messageText, 'user');
+            messageInput.value = '';
+
+            try {
+                const response = await fetch(API_URL + '/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Session-ID': userSessionId },
+                    body: JSON.stringify({ message: messageText })
+                });
+                const data = await response.json();
+                addMessageToHistory(data.response, 'bot');
+            } catch (error) {
+                addMessageToHistory('Error: Could not connect to the server.', 'bot');
+            }
+        }
+
+        function addMessageToHistory(message, sender) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('chat-message', sender);
+            messageElement.innerHTML = message.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            chatHistory.appendChild(messageElement);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+    </script>
+</body>
+</html>

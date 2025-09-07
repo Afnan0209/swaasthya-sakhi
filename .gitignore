@@ -1,0 +1,9 @@
+# Ignore the SQLite database file
+*.db
+
+# Ignore Python's temporary cache folders
+__pycache__/
+
+# Ignore virtual environment folders (if you use one)
+venv/
+.venv/
